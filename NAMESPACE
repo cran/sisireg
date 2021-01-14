@@ -1,0 +1,8 @@
+# Export all names
+exportPattern("[^(C|R)]$")
+import(zoo)
+importFrom("raster", "pointDistance")
+importFrom("stats", "median", "dist","coefficients", "lm", "quantile", "residuals")
+importFrom("graphics", "legend", "lines")
+importFrom("utils", "head", "tail")
+useDynLib(sisireg, .registration = TRUE)
