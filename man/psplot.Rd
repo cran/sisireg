@@ -22,7 +22,7 @@ psplot(sin(seq(-pi, pi, length.out = 200))+rnorm(200),
 \encoding{UTF-8}
 \references{
   Dr. Lars Metzner (2021) \emph{Adäquates Maschinelles Lernen}.
-  Independently Published (to appear).
+  Independently Published.
 }
 \keyword{model}
 \keyword{regression}

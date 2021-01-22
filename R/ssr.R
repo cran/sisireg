@@ -92,43 +92,72 @@ psvalid <- function(dat, mu) {
 
 
 #
+# check, if a given function satisfies the maximum run criterion
+#
+runvalid <- function(dat, mu, k = NULL) {
+  n <- length(dat)
+  if (is.null(k)) k <- maxRunR(n)
+
+  s <- sign(dat-mu)
+  runmax <- max(abs(coredata(rollapply(zoo(s[1:n]), k+1, sum, align = 'center'))))
+
+  if (runmax > k) {
+    print("invalid maximum run detected")
+    return(FALSE)
+  }
+  return(TRUE)
+}
+
+
+#
 # minimum statistic for equidistant regression
 #
-ssr_minR <- function(dat, funk, y1 = NULL, yn = NULL, simanz = 10000) {
+ssr_minR <- function(dat, funk, y1 = NULL, yn = NULL, ps = TRUE, simanz = 10000) {
   # start parameters
   n <- length(dat)
-  k <- maxRunR(n)
-  fn <- fnR(n,k)*0.66
-  mu <- ssrR(dat, funk, y1, yn, fn, simanz)
-  valid <- psvalid(dat, mu)
+  if (ps) {
+    k <- maxRunR(n)
+    fn <- fnR(n,k)*0.66
+  } else {
+    fn <- maxRunR(n)
+  }
+  mu <- ssrR(dat, funk, y1, yn, fn, ps, simanz)
+  valid <- if (ps) psvalid(dat, mu) else runvalid(dat, mu)
   anzExOpt <- numberOfExtremaR(mu)
   anzEx <- anzExOpt
   print(paste0("start: Ex=", anzEx, ", valid=", valid))
   # loop
   while (valid && (anzEx <= anzExOpt) && (fn > 0)) {
     fn <- fn - 1
-    mu <- ssrR(dat, funk, y1, yn, fn, simanz)
-    valid <- psvalid(dat, mu)
+    mu <- ssrR(dat, funk, y1, yn, fn, ps, simanz)
+    valid <- if (ps) psvalid(dat, mu) else runvalid(dat, mu)
     anzEx <- numberOfExtremaR(mu)
     print(paste0("iteration fn=", fn, ": Ex=", anzEx, ", valid=", valid))
   }
   # calculate final function
   fn <- fn + 1
-  mu <- ssrR(dat, funk, y1, yn, fn, simanz)
+  mu <- ssrR(dat, funk, y1, yn, fn, ps, simanz)
 }
 
 
 #
 # wrapper for the iterative solver QSOR (equidistant)
 #
-ssrR <- function(dat, funk, y1 = NULL, yn = NULL, fn = 0, simanz = 10000) {
+ssrR <- function(dat, funk, y1 = NULL, yn = NULL, fn = 0, ps = TRUE, simanz = 10000) {
 
   # parameters
   n <- length(dat)
-  if (fn < 2) fn = max(2, log(n) - 2);
-  k <- as.integer(3.3+1.44*log(n)) # 0.95-quantile of max. run length
-  k2 <- as.integer(k/2)
-  k1 <- k - 2*k2
+  if (ps) {
+    if (fn < 2) fn <- max(2, log(n) - 2);
+    k <- as.integer(3.3+1.44*log(n)) # 0.95-quantile of max. run length
+    k2 <- as.integer(k/2)
+    k1 <- k - 2*k2
+  } else {
+    if (fn < 2) fn <- as.integer(3.3+1.44*log(n)) # 0.95-quantile of max. run length
+    k <- fn
+    k2 <- as.integer(k/2)
+    k1 <- k - 2*k2
+  }
 
   # start values s: 1:k2: median, k2+1:n-k2-1: rollapply(median), n-k2:n: median
   s <- array(dim=n)
@@ -145,6 +174,7 @@ ssrR <- function(dat, funk, y1 = NULL, yn = NULL, fn = 0, simanz = 10000) {
                mu = as.double(s),
                as.integer(n),
                as.integer(fn),
+               as.integer(if (ps) 1 else 0),
                as.integer(simanz))
   result$mu
 }
@@ -217,12 +247,12 @@ ssr_neR <- function(df, fn = 0, simanz = 10000) {
 #
 # calculates the ssr-model
 #
-ssr <- function(df, y1 = NULL, yn = NULL, fn = 0, iter = 10000, minStat = FALSE, ne = TRUE, l1 = TRUE) {
+ssr <- function(df, y1 = NULL, yn = NULL, fn = 0, iter = 10000, minStat = FALSE, ne = TRUE, l1 = TRUE, ps = TRUE) {
 
   funk <- if (l1) 1 else 2
   colnames(df) <- c("x", "y")
 
-  # nonequidistant
+  # non-equidistant
   if (ne) {
     # minimum statistic
     if (minStat) {
@@ -233,9 +263,9 @@ ssr <- function(df, y1 = NULL, yn = NULL, fn = 0, iter = 10000, minStat = FALSE,
   } else {
     # minimum statistic
     if (minStat) {
-      ssr_minR(df$y, funk, y1, yn, iter)
+      ssr_minR(df$y, funk, y1, yn, ps, iter)
     } else {
-      ssrR(df$y, funk, y1, yn, fn, iter)
+      ssrR(df$y, funk, y1, yn, fn, ps, iter)
     }
   }
 

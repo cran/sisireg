@@ -1,20 +1,21 @@
-% File sisireg/man/psvalid.Rd
-\name{psvalid}
-\alias{psvalid}
-\title{Partial Sum Validity Check}
-\description{Checks, if a given regression function is adequate with respect to the partial sum criterium.}
+% File sisireg/man/runvalid.Rd
+\name{runvalid}
+\alias{runvalid}
+\title{Maximum Run Validity Check}
+\description{Checks, if a given regression function is adequate with respect to the maximum run criterium.}
 \usage{
-psvalid(dat,mu)
+runvalid(dat,mu,k=NULL)
 }
 \arguments{
   \item{dat}{obervations.}
   \item{mu}{discrete regression function.}
+  \item{k}{optional: maximum run length.}
 }
 \value{
   \item{valid}{function is valid?}
 }
 \examples{
-psvalid(sin(seq(-pi, pi, length.out = 200))+rnorm(200), sin(seq(-pi, pi, length.out = 200)))
+runvalid(sin(seq(-pi, pi, length.out = 200))+rnorm(200)/2, sin(seq(-pi, pi, length.out = 200)))
 }
 \author{
   Dr. Lars Metzner

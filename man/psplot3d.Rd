@@ -33,7 +33,7 @@ psplot3d(xy, z, df_model$mu, 'ssr3d')
 \encoding{UTF-8}
 \references{
   Dr. Lars Metzner (2021) \emph{Adäquates Maschinelles Lernen}.
-  Independently Published (to appear).
+  Independently Published.
 }
 \keyword{model}
 \keyword{regression}
