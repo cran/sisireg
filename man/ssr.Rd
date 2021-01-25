@@ -44,7 +44,7 @@ legend("topleft", inset=c(0.01,0.01), legend=c("L1 run-crit.", "L2 ps-crit.", "L
 df <- data.frame(x=runif(500, min=-1, max=1)*pi)
 df$y <- sin(df$x)*20 + rnorm(nrow(df), mean=0, sd=10)
 # calculate regression function
-dfl1 <- ssr(df)
+dfl1 <- ssr(df, fn = 5)
 # plot results
 plot(df)
 lines(dfl1, col = 'red')

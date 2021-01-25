@@ -46,7 +46,7 @@ void ssrC(int* funk, double* y, double* mu, int* anz, int* fn, int *ps, int* sim
             }
           }
         } else {
-          for (int j = max(0,i-k); j <= min(n-1, i+k); j++) {
+          for (int j = max(0,i-k); j < min(n-k, i+k); j++) {
             if (oldsig != newsig) {
               int sum = 0;
               for (int m = 0; m <= k; m++)
@@ -128,7 +128,7 @@ void ssrC(int* funk, double* y, double* mu, int* anz, int* fn, int *ps, int* sim
             }
           }
         } else {
-          for (int j = max(0,i-k); j <= min(n-1, i+k); j++) {
+          for (int j = max(0,i-k); j <= min(n-k, i+k); j++) {
             if (oldsig != newsig) {
               int sum = 0;
               for (int m = 0; m <= k; m++)
