@@ -14,7 +14,8 @@ psvalid(dat,mu)
   \item{valid}{function is valid?}
 }
 \examples{
-psvalid(sin(seq(-pi, pi, length.out = 200))+rnorm(200), sin(seq(-pi, pi, length.out = 200)))
+psvalid(sin(seq(-pi, pi, length.out = 200))+rnorm(200), 
+        sin(seq(-pi, pi, length.out = 200)))
 }
 \author{
   Dr. Lars Metzner

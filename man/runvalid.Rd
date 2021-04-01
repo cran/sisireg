@@ -15,7 +15,8 @@ runvalid(dat,mu,k=NULL)
   \item{valid}{function is valid?}
 }
 \examples{
-runvalid(sin(seq(-pi, pi, length.out = 200))+rnorm(200)/2, sin(seq(-pi, pi, length.out = 200)))
+runvalid(sin(seq(-pi, pi, length.out = 200))+rnorm(200)/2, 
+          sin(seq(-pi, pi, length.out = 200)))
 }
 \author{
   Dr. Lars Metzner
