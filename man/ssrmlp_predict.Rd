@@ -25,11 +25,6 @@ z <- rnorm(300) + atan2(x, y)
 # coordinates
 X <- matrix(cbind(x,y), ncol = 2)
 Y <- as.double(z)
-# scaling
-min_ <- apply(X, 2, min)
-max_ <- apply(X, 2, max)
-X <- t(apply(X, 1, function(x) (x-min_)/(max_-min_)))
-Y = (Y - min(Y)) / (max(Y) - min(Y))
 # Training
 W <- ssrmlp_train(X, Y)
 Yp <- ssrmlp_predict(X, W)

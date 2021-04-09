@@ -7,12 +7,13 @@ Calculates the weights of a 2-layer MLP with respect to the partial sums
 critereon
 }
 \usage{
-ssrmlp_train(X, Y, opt='ps', hl = NULL, W = NULL, k=10, fn=4, 
-                   eta=0.75, maxIter=1000)
+ssrmlp_train(X, Y, std=TRUE, opt='ps', hl = NULL, W = NULL,
+  k=10, fn=4, eta=0.75, maxIter=1000)
 }
 \arguments{
   \item{X}{matrix with n-dimensional coordinates.}
   \item{Y}{array with observations.}
+  \item{std}{optional: standardizing values if TRUE.}
   \item{opt}{optional: optimizing function ('l2' or 'ps'.}
   \item{hl}{optional: array tupel with number of perceptrons in each layer.}
   \item{W}{optional: previously calculates weights for refining the model.}
@@ -34,11 +35,6 @@ z <- rnorm(300) + atan2(x, y)
 # coordinates
 X <- matrix(cbind(x,y), ncol = 2)
 Y <- as.double(z)
-# scaling
-min_ <- apply(X, 2, min)
-max_ <- apply(X, 2, max)
-X <- t(apply(X, 1, function(x) (x-min_)/(max_-min_)))
-Y = (Y - min(Y)) / (max(Y) - min(Y))
 # Training
 W <- ssrmlp_train(X, Y)
 }

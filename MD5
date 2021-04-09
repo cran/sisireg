@@ -1,10 +1,10 @@
-c4359627e838c9d66ad87ef013a7cdfa *DESCRIPTION
+741fc2a9046d993c08b4cb6e9afa7f8f *DESCRIPTION
 9c63c92f03623b4279307e4d19d3f986 *NAMESPACE
 bf51a23c694a224a888b5e09af06dba0 *R/axe.R
 abd124c30e6e6a861a46fe49cd53eed1 *R/snarch.R
 4d331f1b3a1b66cc4aa65598a3796f73 *R/ssr.R
 83f315ae339efd720d71e064a76b09be *R/ssr3d.R
-f7aed4e70b1a6e88d90841e3f0245294 *R/ssrMLP.R
+db856937a49c345f7e90ca9ede76e204 *R/ssrMLP.R
 456ba532b0c4056595c31052d25de3cc *R/ssrnd.R
 88451d53bd3ad1399e9e8eb5e15e8004 *R/tauM.R
 e7d5042bc7ff000538fa088cf3b023ee *man/axe.Rd
@@ -18,8 +18,8 @@ bcf169de806d4f4bc995885e9b50aef1 *man/ssr.Rd
 6df488cb741f0b54ee06186b7897d400 *man/ssr3d.Rd
 06ea9eb53a86a53fe4aca31c1e4a6b7d *man/ssr3d_predict.Rd
 208e0fc073068d93aae37a630ac262d4 *man/ssr_predict.Rd
-d8cb1adfe954f94f9541607667b2769c *man/ssrmlp_predict.Rd
-71b1b9549d7eeb4555a4b450584147b1 *man/ssrmlp_train.Rd
+6018a75dc830f2342abbfec0fcf6afe9 *man/ssrmlp_predict.Rd
+9b17988fae4ca414976246b124f70b4c *man/ssrmlp_train.Rd
 56c00a1a7af3bb340cd51ff6dc3f14d4 *man/ssrnd.Rd
 e9311a20d89a5dc249a649462b838bd0 *man/ssrnd_predict.Rd
 fff7a24bcd7606b81461348c30e84f1e *man/tauM.Rd

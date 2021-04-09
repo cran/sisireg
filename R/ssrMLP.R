@@ -79,19 +79,19 @@ calcOutR <- function(X, W0, W1, W2) {
 # calcuale prediction for a given model W
 #
 ssrmlp_predict <- function(X, W) {
+  X <- t(apply(X, 1, function(x) (x-W$minX)/(W$maxX-W$minX)))
   X <- cbind(X, rep(1, nrow(X)))
   y <- calcOutR(X, W$W0, W$W1, W$W2)
+  y = y * (W$maxY - W$minY)  + W$minY
   return (y)
 }
 
 #
 # training of the network
 #
-ssrmlp_train <- function(X, Y, opt='ps', hl = NULL, W = NULL, k=10, fn=4, eta=0.75, maxIter=1000) {
+ssrmlp_train <- function(X, Y, std=TRUE, opt='ps', hl = NULL, W = NULL, k=10, fn=4, eta=0.75, maxIter=1000) {
   
-  Xnb <- X  # coordinates without bias-coordinate
-  X <- cbind(X, rep(1, nrow(X)))  
-  il <- ncol(X)
+  il <- ncol(X) + 1
   ol <- 1
   n <- length(Y)
   
@@ -100,6 +100,41 @@ ssrmlp_train <- function(X, Y, opt='ps', hl = NULL, W = NULL, k=10, fn=4, eta=0.
     hl <- c(hln, hln)
   }
   printR('ssrMLP: Hidden Layer: %i\n', hl[1])
+  
+  # standardizing to unit interval
+  if (is.null(W)) {
+    if (std) {
+      minX <- apply(X, 2, min)
+      maxX <- apply(X, 2, max)
+      X <- t(apply(X, 1, function(x) (x-minX)/(maxX-minX)))
+      minY <- min(Y)
+      maxY <- max(Y)
+      Y = (Y - minY) / (maxY - minY)
+    } else {
+      minX <- 0
+      maxX <- 1
+      minY <- 0
+      maxY <- 1
+    }
+    W0 <- array(runif(hl[1]*il, -0.5, 0.5), dim=c(hl[1], il))
+    W1 <- array(runif(hl[2]*hl[1], -0.5, 0.5), dim=c(hl[2], hl[1]))
+    W2 <- array(runif(ol*hl[2], -0.5, 0.5), dim=c(ol, hl[2]))
+  } else {
+    printR("ssrMLP: re-training...\n")
+    W0 <- W$W0
+    W1 <- W$W1
+    W2 <- W$W2
+    
+    minX <- W$minX
+    maxX <- W$maxX
+    minY <- W$minY
+    maxY <- W$maxY
+    X <- t(apply(X, 1, function(x) (x-minX)/(maxX-minX)))
+    Y = (Y - minY) / (maxY - minY)
+  }
+
+  Xnb <- X  # coordinates without bias-coordinate
+  X <- cbind(X, rep(1, nrow(X)))  
   
   if (opt == 'l2') {
     printR("ssrMLP: optimizing with L2-residuals\n")
@@ -112,17 +147,6 @@ ssrmlp_train <- function(X, Y, opt='ps', hl = NULL, W = NULL, k=10, fn=4, eta=0.
     facfct <- fac_psR
     d <- as.matrix(dist(Xnb))
     nb <- lapply(seq_len(ncol(d)), function(i) head(sort(d[,i], index.return=TRUE)$ix, (il-1)*k+1))
-  }
-  
-  # init weights
-  if (!is.null(W)) {
-    W0 <- W$W0
-    W1 <- W$W1
-    W2 <- W$W2
-  } else {
-    W0 <- array(runif(hl[1]*il, -0.5, 0.5), dim=c(hl[1], il))
-    W1 <- array(runif(hl[2]*hl[1], -0.5, 0.5), dim=c(hl[2], hl[1]))
-    W2 <- array(runif(ol*hl[2], -0.5, 0.5), dim=c(ol, hl[2]))
   }
   
   Yp <- calcOutR(X, W0, W1, W2)
@@ -175,5 +199,6 @@ ssrmlp_train <- function(X, Y, opt='ps', hl = NULL, W = NULL, k=10, fn=4, eta=0.
   }
   printR("]\n")
   printR('ssrMLP: final minError: %f\n', minError)
-  return (list(W0=W0, W1=W1, W2=W2))
+  return (list(W0=minW0, W1=minW1, W2=minW2, 
+               minX=minX, maxX=maxX, minY=minY, maxY=maxY))
 }
