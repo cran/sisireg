@@ -99,7 +99,7 @@ ssrmlp_train <- function(X, Y, std=TRUE, opt='ps', hl = NULL, W = NULL, k=10, fn
     hln <- as.integer(-(il+ol+1)/2 + sqrt((il+ol+1)**2+n))*2
     hl <- c(hln, hln)
   }
-  printR('ssrMLP: Hidden Layer: %i\n', hl[1])
+  printR('ssrMLP: number of neurons per layer: %i\n', hl[1])
   
   # standardizing to unit interval
   if (is.null(W)) {

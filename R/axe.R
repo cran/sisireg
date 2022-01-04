@@ -41,7 +41,7 @@ changesR <- function(period, df) {
 #
 risklevelR <- function(period, df) {
   printR(paste0("calculating ", period, "-day risk level...\n"))
-  df[paste0("risk",period)] <- c(unlist(lapply(seq_len(nrow(df)-(period-1)), function(i) (max(df$quotes[i:(i+period-1)])-min(df$quotes[i:(i+4)])))), rep(NA, (period-1))) / df$quotes
+  df[paste0("risk",period)] <- c(unlist(lapply(seq_len(nrow(df)-(period-1)), function(i) (max(df$quotes[i:(i+period-1)])-min(df$quotes[i:(i+period-1)])))), rep(NA, (period-1))) / df$quotes
   return(df)
 }
 
