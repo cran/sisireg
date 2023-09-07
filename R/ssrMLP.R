@@ -2,6 +2,7 @@
 # reconstruction of 2-layer MLP with partial sum optimizer
 #
 
+
 #
 # internal: sigmoid-function
 #
@@ -76,10 +77,44 @@ calcOutR <- function(X, W0, W1, W2) {
 }  
 
 #
+# factor-wise sum of the model weights
+#
+ffi_model <- function(W) {
+  X <- diag(ncol(W$W0))
+  O1 <- sigmoidR(W$W0 %*% t(X))
+  O2 <- sigmoidR(W$W1 %*% O1)
+  y <- t(W$W2 %*% O2)
+  y = y / (sum(y))
+  return (c(y))
+} 
+
+#
+# factorwise calculation
+#
+ffi_prediction <- function(W, x) {
+  ffi_model <- matrix(, nrow = ncol(W$W0), ncol = 0)
+  for (i in 1:nrow(x)) {
+    ffi <- c((x[i,]-W$minX)/(W$maxX-W$minX),1) # norming to [0,1]
+    ffi[is.na(ffi)] <- 0 # to avoid NaN from div / 0
+    X <- diag(ffi, ncol(W$W0))
+    O1 <- sigmoidR(W$W0 %*% t(X))
+    O2 <- sigmoidR(W$W1 %*% O1)
+    y <- t(W$W2 %*% O2)
+    y = y * (W$maxY - W$minY) + W$minY
+    y = y / (sum(y))
+    ffi_model <- cbind(ffi_model, y)
+  }
+  ffi_model <- apply(ffi_model, 1, function(x) mean(na.omit(x)))
+  return(ffi_model)
+}
+
+
+#
 # calcuale prediction for a given model W
 #
 ssrmlp_predict <- function(X, W) {
   X <- t(apply(X, 1, function(x) (x-W$minX)/(W$maxX-W$minX)))
+  X[is.na(X)] <- 0 # to avoid NaN from div / 0
   X <- cbind(X, rep(1, nrow(X)))
   y <- calcOutR(X, W$W0, W$W1, W$W2)
   y = y * (W$maxY - W$minY)  + W$minY
@@ -107,6 +142,7 @@ ssrmlp_train <- function(X, Y, std=TRUE, opt='ps', hl = NULL, W = NULL, k=10, fn
       minX <- apply(X, 2, min)
       maxX <- apply(X, 2, max)
       X <- t(apply(X, 1, function(x) (x-minX)/(maxX-minX)))
+      X[is.na(X)] <- 0 # to avoid NaN from div / 0
       minY <- min(Y)
       maxY <- max(Y)
       Y = (Y - minY) / (maxY - minY)
