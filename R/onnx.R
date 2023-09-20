@@ -17,20 +17,19 @@ onnxR <- NULL
 #
 onnx_save <- function(ssrmlp_model, filename) {
   # initializers: model parameters 
-  B  <- onnxR$numpy_helper$from_array(npR$array(as.matrix(1,1,1), dtype=npR$float64), name='B')
   W0 <- onnxR$numpy_helper$from_array(npR$array(ssrmlp_model$W0, dtype=npR$float64), name='W0')
   W1 <- onnxR$numpy_helper$from_array(npR$array(ssrmlp_model$W1, dtype=npR$float64), name='W1')
   W2 <- onnxR$numpy_helper$from_array(npR$array(ssrmlp_model$W2, dtype=npR$float64), name='W2')
-  minX <- onnxR$numpy_helper$from_array(npR$array(ssrmlp_model$minX, dtype=npR$float64), name='minX')
-  maxX <- onnxR$numpy_helper$from_array(npR$array(ssrmlp_model$maxX, dtype=npR$float64), name='maxX')
+  minX <- onnxR$numpy_helper$from_array(npR$array(matrix(ssrmlp_model$minX,length(ssrmlp_model$minX),1), dtype=npR$float64), name='minX')
+  maxX <- onnxR$numpy_helper$from_array(npR$array(matrix(ssrmlp_model$maxX,length(ssrmlp_model$maxX),1), dtype=npR$float64), name='maxX')
   minY <- onnxR$numpy_helper$from_array(npR$array(ssrmlp_model$minY, dtype=npR$float64), name='minY')
   maxY <- onnxR$numpy_helper$from_array(npR$array(ssrmlp_model$maxY, dtype=npR$float64), name='maxY')
   
-  # Input und Output
-  X <- onnxR$helper$make_tensor_value_info('X', onnxR$TensorProto$FLOAT, list(1L, as.integer(ncol(ssrmlp_model$W0)-1)))
-  Y <- onnxR$helper$make_tensor_value_info('Y', onnxR$TensorProto$FLOAT, list(1L, 1L))
+  # Input und Output (FLOAT=type 1, DOUBLE=type 11)
+  X <- onnxR$helper$make_tensor_value_info('X', onnxR$TensorProto$DOUBLE, list(1L, as.integer(ncol(ssrmlp_model$W0)-1)))
+  Y <- onnxR$helper$make_tensor_value_info('Y', onnxR$TensorProto$DOUBLE, list(1L, 1L))
   
-  # create the graph
+  # create the nodes 
   nodes <- list()
   #X <- t(apply(X, 1, function(x) (x-W$minX)/(W$maxX-W$minX)))
   nodes <- append(nodes, onnxR$helper$make_node('Transpose', list('X'), list('Xt')))
@@ -38,10 +37,11 @@ onnx_save <- function(ssrmlp_model, filename) {
   nodes <- append(nodes, onnxR$helper$make_node('Sub', list('maxX', 'minX'), list('X2')))
   nodes <- append(nodes, onnxR$helper$make_node('Div', list('X1', 'X2'), list('X3')))
   #X <- cbind(X, rep(1, nrow(X)))
-  nodes <- append(nodes, onnxR$helper$make_node('Concat', list('X3', 'B'), list('XB'), axis=1L))
+  nodes <- append(nodes, onnxR$helper$make_node('Constant', list(), list('B'), 
+                                                value=onnxR$helper$make_tensor('const', onnxR$TensorProto$DOUBLE, list(1L, 1L), matrix(1,1))))
+  nodes <- append(nodes, onnxR$helper$make_node('Concat', list('X3', 'B'), list('XB'), axis=-2L))
   #O1 <- sigmoidR(W0 %*% t(X))
-  nodes <- append(nodes, onnxR$helper$make_node('Transpose', list('XB'), list('XBt')))
-  nodes <- append(nodes, onnxR$helper$make_node('MatMul', list('W0', 'XBt'), list('O1')))
+  nodes <- append(nodes, onnxR$helper$make_node('MatMul', list('W0', 'XB'), list('O1')))
   nodes <- append(nodes, onnxR$helper$make_node('Sigmoid', list('O1'), list('O1s')))
   #O2 <- sigmoidR(W1 %*% O1)
   nodes <- append(nodes, onnxR$helper$make_node('MatMul', list('W1', 'O1s'), list('O2')))
@@ -54,16 +54,22 @@ onnx_save <- function(ssrmlp_model, filename) {
   nodes <- append(nodes, onnxR$helper$make_node('Mul', list('Y0t', 'Y1'), list('Y2')))
   nodes <- append(nodes, onnxR$helper$make_node('Add', list('Y2', 'minY'), list('Y')))
   
-  # all together in a graph
+  # assembling the graph
   graph <- onnxR$helper$make_graph(
     nodes,  # nodes
     'ssrmlp', # a name
     list(X),  # inputs
     list(Y),  # outputs
-    list(B, W0, W1, W2, minX, maxX, minY, maxY))    # parameter
-  
+    list(W0, W1, W2, minX, maxX, minY, maxY))    # parameter
+  # completing the model
   model <- onnxR$helper$make_model(graph)
-  onnxR$checker$check_model(model)
+  
+  # check the generated model
+  inferred_model = onnxR$shape_inference$infer_shapes(model)
+  print(inferred_model$graph$value_info)  # gives the dimension of each node
+  onnxR$checker$check_model(model, full_check=TRUE)
+
+  # and save the model
   onnxR$save_model(model, filename)
   
 }

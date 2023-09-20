@@ -79,7 +79,7 @@ calcOutR <- function(X, W0, W1, W2) {
 #
 # factor-wise sum of the model weights
 #
-ffi_model <- function(W) {
+fii_model <- function(W) {
   X <- diag(ncol(W$W0))
   O1 <- sigmoidR(W$W0 %*% t(X))
   O2 <- sigmoidR(W$W1 %*% O1)
@@ -91,21 +91,21 @@ ffi_model <- function(W) {
 #
 # factorwise calculation
 #
-ffi_prediction <- function(W, x) {
-  ffi_model <- matrix(, nrow = ncol(W$W0), ncol = 0)
+fii_prediction <- function(W, x) {
+  fii_model <- matrix(, nrow = ncol(W$W0), ncol = 0)
   for (i in 1:nrow(x)) {
-    ffi <- c((x[i,]-W$minX)/(W$maxX-W$minX),1) # norming to [0,1]
-    ffi[is.na(ffi)] <- 0 # to avoid NaN from div / 0
-    X <- diag(ffi, ncol(W$W0))
+    fii <- c((x[i,]-W$minX)/(W$maxX-W$minX),1) # norming to [0,1]
+    fii[is.na(fii)] <- 0 # to avoid NaN from div / 0
+    X <- diag(fii, ncol(W$W0))
     O1 <- sigmoidR(W$W0 %*% t(X))
     O2 <- sigmoidR(W$W1 %*% O1)
     y <- t(W$W2 %*% O2)
     y = y * (W$maxY - W$minY) + W$minY
     y = y / (sum(y))
-    ffi_model <- cbind(ffi_model, y)
+    fii_model <- cbind(fii_model, y)
   }
-  ffi_model <- apply(ffi_model, 1, function(x) mean(na.omit(x)))
-  return(ffi_model)
+  fii_model <- apply(fii_model, 1, function(x) mean(na.omit(x)))
+  return(fii_model)
 }
 
 

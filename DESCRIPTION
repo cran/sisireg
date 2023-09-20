@@ -1,6 +1,6 @@
 Package: sisireg
 Title: Sign-Simplicity-Regression-Solver
-Version: 1.1.0
+Version: 1.1.1
 Authors@R: 
     person(given = "Lars",
            family = "Metzner",
@@ -12,8 +12,8 @@ Encoding: UTF-8
 Imports: zoo, raster, reticulate
 RoxygenNote: 7.1.1
 NeedsCompilation: yes
-Packaged: 2023-09-07 13:16:57 UTC; lme
+Packaged: 2023-09-20 12:38:31 UTC; lme
 Author: Lars Metzner [aut, cre]
 Maintainer: Lars Metzner <lars.metzner@ppi.de>
 Repository: CRAN
-Date/Publication: 2023-09-07 15:20:02 UTC
+Date/Publication: 2023-09-20 13:50:02 UTC

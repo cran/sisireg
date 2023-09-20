@@ -38,7 +38,7 @@ if (reticulate::py_module_available('onnx')) {
   backend <-  reticulate::import("onnx_tf.backend")
   model = onnx$load('file.onnx') 
   tf_rep = backend$prepare(model)       
-  tf_y = tf_rep$run(t(p))
+  tf_y = tf_rep$run(p)
   print(tf_y$Y-pred)
   # cleanup
   file.remove('file.onnx')

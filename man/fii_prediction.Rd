@@ -1,21 +1,21 @@
-% File sisireg/man/ffi_prediction.Rd
-\name{ffi_prediction}
-\alias{ffi_prediction}
+% File sisireg/man/fii_prediction.Rd
+\name{fii_prediction}
+\alias{fii_prediction}
 \title{
-Factor-wise Influence Indicator (Prediction-FFI) for a given ssrmlp model
+Factor-wise Influence Indicator (Prediction-fii) for a given ssrmlp model
 regarding a given input vector}
 \description{
-The Prediction-FFI depicts the overall influence of the given input factors on the resulting prediction from a trained ssrmlp model. For computation the components of the input vectors a taken separately as input for the model.
+The Prediction-fii depicts the overall influence of the given input factors on the resulting prediction from a trained ssrmlp model. For computation the components of the input vectors a taken separately as input for the model.
 }
 \usage{
-ffi_prediction(W, x)
+fii_prediction(W, x)
 }
 \arguments{
   \item{W}{a trained ssrmlp model}
   \item{x}{a matrix of input vectors}
 }
 \value{
-  \item{ffi}{array of influence indicators}
+  \item{fii}{array of influence indicators}
 }
 \examples{
 \donttest{
@@ -29,7 +29,7 @@ X <- matrix(cbind(x,y), ncol = 2)
 Y <- as.double(z)
 # Training
 W <- ssrmlp_train(X, Y)
-ffi_prediction(W, X)
+fii_prediction(W, X)
 }
 
 }
