@@ -41,12 +41,17 @@ psplotnd <- function(koord, dat, mu, text = 'Sample') {
       else              printR("x")
     }
     printR("]\n")
+    fn <- fnR(n, seq(5, 4*maxint+1, by = 4))
+    if (all(fn >= ps)) {
+      psResult = 'passed'
+    } else {
+      psResult = 'failed'
+    }
     # plot of the maximal partial sums
     plot(ps, xlim=c(1, maxint), ylim=c(0, max(ps,na.rm=TRUE)+5), type="h",
-         main = paste0('3D partial sums (', text, ')'),
+         main = paste0(text, ': Partial Sum Test -> ', psResult),
          xlab = 'number of neighbors per quadrant', ylab = 'max. partial sum')
     # plot of the quantiles
-    fn <- fnR(n, seq(5, 4*maxint+1, by = 4))
     lines(fn, xlim=c(1, maxint), col="red", lwd = 3)
     legend("topleft", inset=c(0.01,0.01),
            legend=c('quantiles'), col=c("red"), lty=1:1)

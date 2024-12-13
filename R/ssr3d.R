@@ -3,15 +3,23 @@
 #
 
 #
+# help function: pointDistance from library raster not available any more
+#
+pointDistanceR <- function(a, b, lonlat) {
+  b <- as.matrix(b)
+  return (sqrt(rowSums((sweep(a, 2, b))^2)))
+}
+
+#
 # calculates the k nearest neighbors in each quadrant for a reference coordinate x
 #
 nearneighborsQR <- function(x, koord, k = 1) {
-  d <- pointDistance(as.matrix(koord), x, lonlat=FALSE)
+  d <- pointDistanceR(as.matrix(koord), x, lonlat=FALSE)
   # refrence point
   nb0 <- which(d == 0)
   # upper right / north east
   xQ1 <- as.matrix(koord[which(koord$x > x[1] & koord$y >= x[2]),])
-  d1 <- pointDistance(xQ1, x, lonlat=FALSE)
+  d1 <- pointDistanceR(xQ1, x, lonlat=FALSE)
   nb1 <- which(d %in% head(sort(d1), k))
   # only coordinates lying in the quadrant
   XXQ1 <- koord[nb1,]
@@ -19,7 +27,7 @@ nearneighborsQR <- function(x, koord, k = 1) {
   nb1 <- as.integer(rownames(XXQ1))
   # upper left / north west
   xQ2 <- as.matrix(koord[which(koord$x <= x[1] & koord$y > x[2]),])
-  d2 <- pointDistance(xQ2, x, lonlat=FALSE)
+  d2 <- pointDistanceR(xQ2, x, lonlat=FALSE)
   nb2 <- which(d %in% head(sort(d2), k))
   # only coordinates lying in the quadrant
   XXQ2 <- koord[nb2,]
@@ -27,7 +35,7 @@ nearneighborsQR <- function(x, koord, k = 1) {
   nb2 <- as.integer(rownames(XXQ2))
   # lower left / south west
   xQ3 <- as.matrix(koord[which(koord$x < x[1] & koord$y <= x[2]),])
-  d3 <- pointDistance(xQ3, x, lonlat=FALSE)
+  d3 <- pointDistanceR(xQ3, x, lonlat=FALSE)
   nb3 <- which(d %in% head(sort(d3), k))
   # only coordinates lying in the quadrant
   XXQ3 <- koord[nb3,]
@@ -35,7 +43,7 @@ nearneighborsQR <- function(x, koord, k = 1) {
   nb3 <- as.integer(rownames(XXQ3))
   # lower right / south east
   xQ4 <- as.matrix(koord[which(koord$x >= x[1] & koord$y < x[2]),])
-  d4 <- pointDistance(xQ4, x, lonlat=FALSE)
+  d4 <- pointDistanceR(xQ4, x, lonlat=FALSE)
   nb4 <- which(d %in% head(sort(d4), k))
   # only coordinates lying in the quadrant
   XXQ4 <- koord[nb4,]
@@ -59,7 +67,7 @@ nearneighboursGridQR <- function(koord, k) {
 # calculates the k-neighborhood for a given reference point
 #
 nearneighborsR <- function(x, koord, k = 1) {
-  d <- pointDistance(as.matrix(koord), x, lonlat=FALSE)
+  d <- pointDistanceR(as.matrix(koord), x, lonlat=FALSE)
   nb <- which(d %in% head(sort(d), k*4+1))
   return (nb)
 
@@ -146,7 +154,7 @@ ssr3d <- function(koord, dat, k= NULL, fn= NULL, iter = 1000) {
 #
 wmeanR <- function(koord, mu, x) {
 
-  d <- pointDistance(koord, x, lonlat=FALSE)
+  d <- pointDistanceR(koord, x, lonlat=FALSE)
   if (0 %in% d) {
     return (mu[which(d == 0)])
   }
@@ -158,7 +166,7 @@ wmeanR <- function(koord, mu, x) {
 #
 wmean_expR <- function(koord, mu, x) {
 
-  d <- pointDistance(koord, x, lonlat=FALSE)
+  d <- pointDistanceR(koord, x, lonlat=FALSE)
   g <- exp(-d)
   wmean <- sum(g*mu)/sum(g)
 }
@@ -174,9 +182,9 @@ wmean_msR <- function(koord, mu, x) {
   x4 <- koord[4,]
 
   # x-Achse
-  dx2 <- pointDistance(x2, x, lonlat = FALSE)
-  dx3 <- pointDistance(x3, x, lonlat = FALSE)
-  d23 <- pointDistance(x2,x3, lonlat = FALSE)
+  dx2 <- pointDistanceR(x2, x, lonlat = FALSE)
+  dx3 <- pointDistanceR(x3, x, lonlat = FALSE)
+  d23 <- pointDistanceR(x2,x3, lonlat = FALSE)
   s23 <- (dx2 + dx3 + d23)/2
   if (s23*(s23-dx3)*(s23-dx2)*(s23-d23) < 0) {
     h23 <- 0
@@ -184,9 +192,9 @@ wmean_msR <- function(koord, mu, x) {
     h23 <- 2/d23*sqrt(abs(s23*(s23-dx3)*(s23-dx2)*(s23-d23)))
   }
 
-  dx1 <- pointDistance(x1, x, lonlat = FALSE)
-  dx4 <- pointDistance(x4, x, lonlat = FALSE)
-  d14 <- pointDistance(x1,x4, lonlat = FALSE)
+  dx1 <- pointDistanceR(x1, x, lonlat = FALSE)
+  dx4 <- pointDistanceR(x4, x, lonlat = FALSE)
+  d14 <- pointDistanceR(x1,x4, lonlat = FALSE)
   s14 <- (dx1 + dx4 + d14)/2
   if (s14*(s14-dx4)*(s14-dx1)*(s14-d14) < 0) {
     h14 <- 0
@@ -195,7 +203,7 @@ wmean_msR <- function(koord, mu, x) {
   }
 
   # y-Achse
-  d34 <- pointDistance(x3,x4, lonlat = FALSE)
+  d34 <- pointDistanceR(x3,x4, lonlat = FALSE)
   s34 <- (dx3 + dx4 + d34)/2
   if (s34*(s34-dx3)*(s34-dx4)*(s34-d34) < 0) {
     h34 <- 0
@@ -203,7 +211,7 @@ wmean_msR <- function(koord, mu, x) {
     h34 <- 2/d34*sqrt(abs(s34*(s34-dx3)*(s34-dx4)*(s34-d34)))
   }
 
-  d12 <- pointDistance(x1,x2, lonlat = FALSE)
+  d12 <- pointDistanceR(x1,x2, lonlat = FALSE)
   s12 <- (dx1 + dx2 + d12)/2
   if (s12*(s12-dx1)*(s12-dx2)*(s12-d12) < 0.001) {
     h12 <- 0

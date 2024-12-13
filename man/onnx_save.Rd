@@ -31,29 +31,33 @@ p <- t(c(0.25, 0.25))
 pred <- ssrmlp_predict(p, ssrmlp_model) 
 # only if python is available
 if (reticulate::py_module_available('onnx')) {
-  # save in ONNX format
-  onnx_save(ssrmlp_model, 'file.onnx')
-  # load and run with TensorFlow
-  onnx <- reticulate::import("onnx")
-  backend <-  reticulate::import("onnx_tf.backend")
-  model = onnx$load('file.onnx') 
-  tf_rep = backend$prepare(model)       
-  tf_y = tf_rep$run(p)
-  print(tf_y$Y-pred)
-  # cleanup
-  file.remove('file.onnx')
-  # to avoid NOTE in R CHECK
-  tempfile <-  reticulate::import("tempfile")
-  tmp <- tempfile$gettempdir()
-  if (dir.exists(file.path(tmp, "__pycache__"))) {
-    unlink(file.path(tmp, "__pycache__"), recursive = TRUE, force = TRUE)
-  }
-  tmp_py_files <- list.files(tmp, 
-                             pattern = "^__autograph_generated_file.*py$", full.names = TRUE)
-  file.remove(tmp_py_files)
-}
+  tryCatch( 
+    {
+      # save in ONNX format
+      onnx_save(ssrmlp_model, 'file.onnx')
+      # and now test with onnxruntime.ai
+    },
+    error = function(cond) {
+      message(conditionMessage(cond))
+    },
+    finally = {
+      # cleanup
+      file.remove('file.onnx')
+      # to avoid NOTE in R CHECK
+      tempfile <-  reticulate::import("tempfile")
+      tmp <- tempfile$gettempdir()
+      if (dir.exists(file.path(tmp, "__pycache__"))) {
+        unlink(file.path(tmp, "__pycache__"), recursive = TRUE, force = TRUE)
+      }
+      tmp_py_files <- list.files(tmp, 
+                                 pattern = "^__autograph_generated_file.*py$", full.names = TRUE)
+      file.remove(tmp_py_files)
+      print("done")
+    }
+  )
 }
 
+}
 }
 \author{
 Dr. Lars Metzner

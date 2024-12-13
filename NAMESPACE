@@ -2,7 +2,6 @@
 exportPattern("[^(C|R)]$")
 import(zoo)
 import(reticulate)
-importFrom("raster", "pointDistance")
 importFrom("stats", "median", "dist","coefficients", "lm", "quantile")
 importFrom("stats", "residuals", "runif", "complete.cases", "na.omit")
 importFrom("graphics", "legend", "plot", "lines")

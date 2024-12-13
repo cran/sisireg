@@ -71,7 +71,7 @@ void getCoordinates(SEXP koord, int n, int dim, double* pd_koord) {
 }
 
 /**
- * extracts the indices and the distances for the neughborhood
+ * extracts the indices and the distances for the neighborhood
  */
 void getNeighborhood(SEXP nb_ind, SEXP nb_dst, int n, int* pi_nb_vec[], int* i_nb_anz, double* pd_dst_vec[]) {
   for (int i = 0; i < n; i++) {

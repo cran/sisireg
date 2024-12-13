@@ -57,16 +57,22 @@ numberOfExtremaR <- function(mu) {
 psplot <- function(dat, mu, text = 'Sample') {
   n <- length(dat)
   maxint <- n/5 + 5
-  ps <- array(data = NA, dim = n, dimnames = NULL)
+  ps <- array(data = NA, dim = maxint, dimnames = NULL)
   # claculating the partial sums
   for (k in (1:maxint)) {
     ps[k] <- psmaxR(dat, mu, k)
   }
+  fn <- fnR(n, seq(1, maxint))
+  if (all(fn >= ps)) {
+    psResult = 'passed'
+  } else {
+    psResult = 'failed'
+  }
   # plot of the maximum partial sums
-  plot(ps, xlim=c(5, maxint), type="h", main = paste0('partial sums (', text, ')'),
+  plot(ps, xlim=c(5, maxint), type="h", 
+       main = paste0(text, ': Partial Sum Test -> ', psResult),
        xlab = 'interval length', ylab = 'max. partial sum')
   # plot of the quantiles
-  fn <- fnR(n, seq(1, maxint))
   lines(fn, xlim=c(5, maxint), col="red", lwd = 3)
   legend("topleft", inset=c(0.01,0.01),
          legend=c('quantiles'), col=c("red"), lty=1:1)
