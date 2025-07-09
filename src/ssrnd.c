@@ -165,11 +165,14 @@ SEXP ssrndC(SEXP koord, SEXP nb_ms, SEXP nb_dst, SEXP nb_ps, SEXP y, SEXP fn, SE
       double oldval = p_mu[i];
       double newval = wmean_nd(pi_nbms_vec, pd_nbdst_vec, i_nbms_anz, p_mu, i);
       p_mu[i] = newval;
+      //if (!chi_nd(pi_nbps_vec, n, i_nbps_anz, i, p_y, p_mu, d_fn)) {
+      //  if (sign(p_y[i] - newval) == sign(p_y[i] - oldval))   p_mu[i] = newval;
+      //  else                                                  p_mu[i] = p_y[i];
+      //}
       if (!chi_nd(pi_nbps_vec, n, i_nbps_anz, i, p_y, p_mu, d_fn)) {
-        if (sign(p_y[i] - newval) == sign(p_y[i] - oldval))   p_mu[i] = newval;
-        else                                                  p_mu[i] = p_y[i];
+        p_mu[i] = oldval; // intial mu fulfills ps criterion
       }
-      if (fabs(p_mu[i]-oldval) > 0.0000001)  change = TRUE;
+      if (p_mu[i] != oldval)  change = TRUE;
     }
     if (!change)  {
       break;

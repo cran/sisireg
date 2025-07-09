@@ -119,7 +119,7 @@ ssrnd_predictSingleR <- function(mu, nb_ind, nb_dst, xx) {
 ssrnd_predict <- function(df_model, xx) {
   dim <- length(df_model$koord)
   dimout <- length(df_model$dat)
-  print(paste0("ssrnd_predict: ", dim, " in, ", dimout, " out"))
+  #print(paste0("ssrnd_predict: ", dim, " in, ", dimout, " out"))
   n <- (dim)*4
 
   koord <- df_model$koord

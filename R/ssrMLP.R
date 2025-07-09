@@ -229,6 +229,8 @@ ssrmlp_predict <- function(X, W) {
 #
 ssrmlp_train <- function(X, Y, std=TRUE, opt='ps', hl=NULL, W=NULL, k=10, fn=4, eta=0.75, maxIter=1000, facfct_ex=NULL, errfct_ex=NULL, alpha=NULL) {
   
+  start.time <- Sys.time()
+  
   il <- ncol(X) + 1
   ol <- 1
   n <- length(Y)
@@ -389,6 +391,8 @@ ssrmlp_train <- function(X, Y, std=TRUE, opt='ps', hl=NULL, W=NULL, k=10, fn=4, 
   }
   printR("]\n")
   printR('ssrMLP: final minError: %f\n', minError)
+  end.time <- Sys.time()
+  printR('ssrMLP: training duration %s secs\n', difftime(end.time, start.time, units='secs'))
   return (list(W0=minW0, W1=minW1, W2=minW2, 
                minX=minX, maxX=maxX, minY=minY, maxY=maxY))
 }
