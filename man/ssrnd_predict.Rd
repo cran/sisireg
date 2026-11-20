@@ -6,11 +6,11 @@
 Calculates the prediction for a given multi-dimensional SSR model
 }
 \usage{
-ssrnd_predict(df_model, xx)
+ssrnd_predict(xx, mdl)
 }
 \arguments{
-  \item{df_model}{data frame with model coordinates.}
   \item{xx}{data frame with coordinates for prediction.}
+  \item{mdl}{data frame with model coordinates.}
 }
 \value{
   \item{z}{list with predictions.}
@@ -19,16 +19,19 @@ ssrnd_predict(df_model, xx)
 \donttest{
 # generate data
 set.seed(1234)
-x <- rnorm(300)
-y <- rnorm(300)
-xy <- data.frame(x=x, y=y)
-z <-data.frame(z=rnorm(300) + atan2(x, y))
+x_ <- y_ <- seq(-3, 3, length=20)
+xy <- expand.grid(x=x_,y=y_)
+x <- xy$x
+y <- xy$y
+z <- rnorm(400) + atan2(x, y)
+X <- matrix(cbind(x, y), ncol = 2)
+Y <- as.double(z)
 # Training
-df_model <- ssrnd(xy, z)
+df_model <- ssrnd(X, Y, k = 4, fn = 8)
 # Prediction
 xx <- c(c(0,1), c(-1,1), c(1,-1))
 xx <- matrix(xx, ncol = 2)
-yy <- ssrnd_predict(df_model, xx)
+yy <- ssrnd_predict(xx, df_model)
 }
 }
 \author{

@@ -1,5 +1,5 @@
 #
-# reconstruction of 2-layer MLP with partial sum optimizer
+# rework of ssrMLP: partial sums in a pre-calculated sign list
 #
 
 
@@ -11,203 +11,211 @@ sigmoidR <- function(x) {
 }
 
 #
-# internal: 1st derivative from sigmoid-function
+# internal: continuous version of signum function
 #
-d1sigmoidR <- function(x) {
-  sigmoidR(x)*(1-sigmoidR(x))
-}
-
-#
-# internal: check partial sums for a given coordinate i
-#
-check_psR <- function(nb, Y, Yp, i, k=10, fn=4) {
-  for (nbi in nb) {
-    if (i %in% unlist(nbi)) {
-      s <- 0
-      for (m in unlist(nbi)) {
-        s <- s + sign(Y[m] - Yp[m])
-      }
-      if (abs(s) > fn)  return (FALSE)
-    }
-  }
-  return (TRUE)
+sign2R <- function(x, a = 100) {
+  return (atan(a*x)/(pi*0.5))
 }
 
 
 #
-# definition of error functions and their first derivative
+# internal: partial sum functional
 #
+psR <- function(s_nb, fn) {
+  return (sum(pmax(0, abs(s_nb) - fn)))
+}
+
+#
+# definitions of error functions and their first derivatives
+#
+
+#
+# internal: loss function for least squared residuals
+#
+loss_lseR <- function(y, yp) {
+  return (sum((y-yp)**2))
+}
+#
+# internal: first derivative of lse loss function
+#
+loss_lse_dR <- function(y, yp, nb, nb_dst, nb_i, i) {
+  return ((y[i]-yp[i]))
+}
+
+#
+# internal: function to be minimized: squared error s.t. partial sums criterion
+#
+opt_lseR <- function(y, yp, nb, nb_dst, s_nb, k, fn, alpha, beta) {
+  return (alpha * loss_lseR(y, yp) + beta * opt_psR(y, yp, nb, nb_dst, s_nb, k, fn, alpha, beta))
+}
+#
+# internal: first derivative of optimizing function: lse s.t. ps
+#
+opt_lse_dR <- function(y, yp, nb, nb_dst, s_nb, nb_i, i, k, fn, alpha, beta) {
+  return (alpha * loss_lse_dR(y, yp, nb, nb_dst, nb_i, i) + beta * opt_ps_dR(y, yp, nb, nb_dst, s_nb, nb_i, i, k, fn, alpha, beta))
+}
+
+#
+# internal: function to be minimized: numerically stable and working alternative
+#
+opt_simpleR <- function(y, yp, nb, nb_dst, s_nb, k, fn, alpha, beta) {
+  return (sum(abs(y - yp)))
+}
+#
+# internal: first derivative of optimizing function: alternative
+#
+opt_simple_dR <- function (y, yp, nb, nb_dst, s_nb, nb_i, i, k, fn, alpha, beta) {
+  return (sign2R(y[i] - yp[i]))
+}
 
 #
 # internal: error-function for partial sums
 #
-err_psR <- function(nb, nb_dst=NULL, dim=NULL, Y, Yp, k=10, fn=4) {
-  s <- 0
-  for (nbi in nb) {
-    tmp <- 0
-    for (i in unlist(nbi)) {
-      tmp <- tmp + sign(Y[i] - Yp[i])
-    }
-    s <- s + max(0, abs(tmp)-fn)
-  }
-  return (s)
+opt_psR <- function(y, yp, nb, nb_dst, s_nb, k, fn, alpha, beta) {
+  return (psR(s_nb, fn))
 }
 #
-# internal: factor calculation for partial sums (derivative of error function regarding Yp[i])
+# internal: first derivative ps functional, approximating sign function with power function
 #
-fac_psR <- function(nb, nb_dst=NULL, dim=NULL, Y, Yp, i, k=10, fn=4) {
-  if (check_psR(nb, Y, Yp, i)) yfactor <- 0
-  else                         yfactor <- sign(Y[i]-Yp[i]) * (abs(Y[i]-Yp[i])**0.01)
+opt_ps_dR <- function(y, yp, nb, nb_dst, s_nb, nb_i, i, k, fn, alpha, beta) {
+  h <- s_nb[unlist(nb_i[i])]
+  if (sum(pmax(0, h-fn) - pmin(0, h+fn)) == 0) yfactor <- 0.0
+  else                                         yfactor <- sign(y[i]-yp[i]) * (abs(y[i]-yp[i])**0.01)
   return (yfactor)
 }
 
 #
-# internal: error function for squared residuals (lse)
+# internal: builds the k_nb-nearest-neighborhood as matrices (k_nb x n)
+#           and the inverse neighborhood index nb_i (list of length n)
 #
-err_lseR <- function(nb=NULL, nb_dst=NULL, dim=NULL, Y, Yp, k=10, fn=4) {
-  ret <- sum((Y-Yp)**2)/length(Y)
-  return (ret)
-}
+# nb[,i]     - indices of the k_nb nearest neighbors of point i (incl. i itself)
+# nb_dst[,i] - corresponding distances
+# nb_i[[j]]  - indices of all points whose neighborhood contains point j
 #
-# internal: factor calculation for lse (derivative of error function regarding Yp[i])
-#
-fac_lseR <- function(nb=NULL, nb_dst=NULL, dim=NULL, Y, Yp, i, k=10, fn=4) {
-  ret <- Y[i] - Yp[i]
-  return (ret)
+buildNeighborhoodR <- function(Xnb, k_nb) {
+  n <- nrow(Xnb)
+  d <- as.matrix(dist(Xnb))
+
+  nb     <- vapply(seq_len(n), function(i) head(sort.list(d[,i]), k_nb), integer(k_nb))
+  nb_dst <- vapply(seq_len(n), function(i) head(as.vector(sort(d[,i])), k_nb), numeric(k_nb))
+
+  # inverse index via split() (O(n log n)) instead of O(n^2) apply()/%in%
+  owner <- rep(seq_len(n), each = k_nb)
+  nb_i <- split(owner, as.vector(nb))
+  nb_i <- nb_i[as.character(seq_len(n))]
+  empty <- vapply(nb_i, is.null, logical(1))
+  if (any(empty)) nb_i[empty] <- list(integer(0))
+
+  return (list(d=d, nb=nb, nb_dst=nb_dst, nb_i=nb_i))
 }
 
 #
-# internal: error-function for partial sums combined with least squares
+# internal: vectorized computation of the partial sum vector s_nb
+#           for the full neighborhood matrix nb (k_nb x n)
 #
-err_ps_lseR <- function(nb, dist, dim, Y, Yp, k=10, fn=4, alpha=0.0001) {
-  # partial sum
-  s <- 0
-  for (nbi in nb) {
-    tmp <- 0
-    for (i in unlist(nbi)) {
-      tmp <- tmp + sign(Y[i] - Yp[i])
-    }
-    s <- s + max(0, abs(tmp)-fn)
+computeSnbR <- function(Y, Yp, nb, k_nb) {
+  return (colSums(matrix(sign(Y[nb] - Yp[nb]), nrow = k_nb)))
+}
+
+#
+# internal: builds the list of weight matrices for an n-layer MLP
+#
+# dims - vector c(il, hl_1, ..., hl_nl, ol) of layer sizes, i.e. length nl+2
+# Wl[[l]] has dimension dims[l+1] x dims[l], l = 1..nl+1
+# (Wl[[nl+1]] is the linear output layer)
+#
+initWeightsR <- function(dims) {
+  nw <- length(dims) - 1
+  Wl <- vector("list", nw)
+  for (l in seq_len(nw)) {
+    Wl[[l]] <- array(runif(dims[l+1]*dims[l], -0.5, 0.5), dim=c(dims[l+1], dims[l]))
   }
-  # additional L1
-  s <- s + alpha*sum((Yp-Y)**2)
-  return (s)
-}
-#
-# internal: factor function for combined PS-LSE error 
-#
-fac_ps_lseR <- function(nb, dist, dim, Y, Yp, i, k=10, fn=4, alpha=0.0001) {
-  yfactor <- alpha*(Y[i]-Yp[i])
-  if (!check_psR(nb, Y, Yp, i)) yfactor <- yfactor + sign(Y[i]-Yp[i]) * (abs(Y[i]-Yp[i])**0.01)
-  return (yfactor)
-}
-
-#
-# internal: error-function for partial sums combined with L1 curvature of regression function
-#
-err_ps_l1R <- function(nb, dist, dim, Y, Yp, k=10, fn=4, alpha=0.0001) {
-  # partial sum
-  s <- 0
-  for (nbi in nb) {
-    tmp <- 0
-    for (i in unlist(nbi)) {
-      tmp <- tmp + sign(Y[i] - Yp[i])
-    }
-    s <- s + max(0, abs(tmp)-fn)
-  }
-  # additional L1: take only one observation per axis plus center
-  l1 <- 0
-  # iterating through 2 lists simultaneously: for-loop / nb and dist have same dimension
-  for (j in 1:length(dist)) {
-    nbi <- unlist(nb[j])
-    dst <- unlist(dist[j])
-    i0 <- nbi[1] # neighborhoods are sorted by distance ascending, center is first index in neighborhood
-    # take only first dim values: dimension of Input plus one
-    for (i in 1:length(nbi)) {
-      if (dst[i] != 0) {
-        l1 <- l1 + ((Yp[i0]-Yp[nbi[i]])/dst[i])**2
-      }
-    }
-  }
-  # final value  
-  s <- s + alpha * l1
-  
-  return (s)
-}
-#
-# internal: factor function (first derivative) of combined PS-L1 error function
-#
-fac_ps_l1R <- function(nb, dist, dim, Y, Yp, ind, k=10, fn=4, alpha=0.0001) {
-  yfactor <- 0.0
-  if (!check_psR(nb, Y, Yp, ind)) {
-    yfactor <- sign(Y[ind]-Yp[ind]) * (abs(Y[ind]-Yp[ind])**0.01)
-  }
-  # use only direct neighbors: one per axis plus center
-  l1 <- 0
-  for (i in 1:length(nb)) {
-    nbi <- unlist(nb[i])
-    dst <- unlist(dist[i])
-    if (ind %in% head(nbi, dim)) {
-      i0 <- nbi[1] # neighborhoods are sorted by distance ascending, center is first index in neighborhood
-      for (j in 2:length(nbi)) {
-        if (dst[j] != 0) {
-          l1 <- l1 + ((Yp[i0]-Yp[nbi[j]])/dst[j])
-        }
-      }
-    }
-  }
-  yfactor <- yfactor + alpha * l1
-  #print(paste(ind, ":", l1, "/", yfactor))
-  return (yfactor)
+  return (Wl)
 }
 
 
-
 #
-# internal: calculate output vector
-#
-calcOutR <- function(X, W0, W1, W2) {
-  O1 <- sigmoidR(W0 %*% t(X))
-  O2 <- sigmoidR(W1 %*% O1)
-  y <- t(W2 %*% O2)
-  return (y)
-}  
-
-#
-# factor-wise sum of the model weights
+# factorwise influence indiction (fii) - factor-wise sum of the model weights
 #
 fii_model <- function(W) {
-  X <- diag(ncol(W$W0))
-  O1 <- sigmoidR(W$W0 %*% t(X))
-  O2 <- sigmoidR(W$W1 %*% O1)
-  y <- t(W$W2 %*% O2)
-  y = y / (sum(y))
+  il <- ncol(W$Wl[[1]])
+  X <- diag(il)
+  y <- calcOutNR(X, W$Wl)
+  y <- y / sum(y)
   return (c(y))
-} 
+}
 
 #
-# factorwise calculation
+# factorwise influence indiction (fii) - factorwise calculation based on input data
 #
 fii_prediction <- function(W, x) {
-  fii_model <- matrix(, nrow = ncol(W$W0), ncol = 0)
+  il <- ncol(W$Wl[[1]])
+  fii_pred <- matrix(, nrow = il, ncol = 0)
   for (i in 1:nrow(x)) {
-    fii <- c((x[i,]-W$minX)/(W$maxX-W$minX),1) # norming to [0,1]
+    fii <- c((x[i,]-W$minX)/(W$maxX-W$minX), 1) # norming to [0,1]
     fii[is.na(fii)] <- 0 # to avoid NaN from div / 0
-    X <- diag(fii, ncol(W$W0))
-    O1 <- sigmoidR(W$W0 %*% t(X))
-    O2 <- sigmoidR(W$W1 %*% O1)
-    y <- t(W$W2 %*% O2)
-    y = y * (W$maxY - W$minY) + W$minY
-    y = y / (sum(y))
-    fii_model <- cbind(fii_model, y)
+    Xd <- diag(fii, il)
+    y <- calcOutNR(Xd, W$Wl)
+    y <- y * (W$maxY - W$minY) + W$minY
+    y <- y / sum(y)
+    fii_pred <- cbind(fii_pred, y)
   }
-  fii_model <- apply(fii_model, 1, function(x) mean(na.omit(x)))
-  return(fii_model)
+  fii_pred <- apply(fii_pred, 1, function(x) mean(na.omit(x)))
+  return (fii_pred)
 }
 
 
 #
-# calculate prediction for a given model W
+# internal: batch forward pass through an n-layer MLP
+#
+# all hidden layers use the sigmoid activation, the output layer (Wl[[nl+1]])
+# is linear (no activation) - as in the original 2-layer architecture
+#
+calcOutNR <- function(X, Wl) {
+  nl <- length(Wl) - 1
+  O <- t(X)
+  for (l in seq_len(nl)) {
+    O <- sigmoidR(Wl[[l]] %*% O)
+  }
+  return (t(Wl[[nl+1]] %*% O))
+}
+
+#
+# internal: forward pass for a single sample x (row vector, length dims[1])
+#
+# returns the list of layer activations A (A[[1]] = x, A[[l+1]] = output of
+# hidden layer l) and the (scalar) network output y
+#
+forwardR <- function(x, Wl) {
+  nl <- length(Wl) - 1
+  A <- vector("list", nl + 1)
+  A[[1]] <- as.vector(x)
+  for (l in seq_len(nl)) {
+    A[[l+1]] <- as.vector(sigmoidR(Wl[[l]] %*% A[[l]]))
+  }
+  y <- as.vector(Wl[[nl+1]] %*% A[[nl+1]])
+  return (list(A=A, y=y))
+}
+
+#
+# internal: backpropagation - gradient of the (scalar) output y w.r.t. every
+#           weight matrix in Wl, for a single sample (activations A from forwardR)
+#
+gradR <- function(Wl, A) {
+  nl <- length(Wl) - 1
+  dW <- vector("list", nl + 1)
+  dW[[nl+1]] <- matrix(A[[nl+1]], nrow = 1)   # dy/dW_out (linear output layer)
+  delta <- as.vector(Wl[[nl+1]])              # dy/dA[[nl+1]]
+  for (l in rev(seq_len(nl))) {
+    deltaL <- delta * A[[l+1]] * (1 - A[[l+1]])   # dy/dnet_l
+    dW[[l]] <- outer(deltaL, A[[l]])
+    if (l > 1) delta <- as.vector(deltaL %*% Wl[[l]])  # dy/dA[[l]]
+  }
+  return (dW)
+}
+
+#
+# calculate prediction for a given model W (as returned by ssrmlp_train)
 #
 ssrmlp_predict <- function(X, W) {
   il <- ncol(X)
@@ -219,27 +227,38 @@ ssrmlp_predict <- function(X, W) {
     X <- matrix(X)
 
   X <- cbind(X, rep(1, nrow(X)))
-  y <- calcOutR(X, W$W0, W$W1, W$W2)
+  y <- calcOutNR(X, W$Wl)
   y = y * (W$maxY - W$minY)  + W$minY
-  return (y)
+  return (y[,1])
 }
 
 #
 # training of the network
 #
-ssrmlp_train <- function(X, Y, std=TRUE, opt='ps', hl=NULL, W=NULL, k=10, fn=4, eta=0.75, maxIter=1000, facfct_ex=NULL, errfct_ex=NULL, alpha=NULL) {
+ssrmlp_train <- function(X, Y, std=TRUE, opt='ps', nl=2, hl=NULL, W=NULL, k=NULL, fn=NULL, eta=0.5, accept = 10, maxIter=1000, alpha=NULL, beta=NULL) {
   
   start.time <- Sys.time()
   
   il <- ncol(X) + 1
   ol <- 1
   n <- length(Y)
+  printR('ssrMLP: Data details: n=%i, Input Layer=%i, Output Layer=%i\n', n, il-1, ol)
   
+  if (is.null(k))   k = maxRunR(n)
+  k_nb <- (il-1)*k+1
+  if (is.null(fn)) fn = fnR(n, k_nb)*0.5
+  printR('ssrMLP: Partial Sum Parameters: k=%i / nb=%i / fn=%f\n', k, k_nb, fn)
+  
+  if (nl < 1) stop("ssrMLP: nl (number of hidden layers) must be >= 1")
   if (is.null(hl)) {
-    hln <- as.integer(-(il+ol+1)/2 + sqrt((il+ol+1)**2+n))*2
-    hl <- c(hln, hln)
+    hln <- as.integer(-(il+ol+1)/2 + sqrt((il+ol+1)**2+n))
+    hl <- c(rep(hln, nl - 1), hln %/% 2)  # default: all layers with equal neuron count, except last layer
+  } else if (length(hl) == 1) {
+    hl <- rep(hl, nl)                  # single value given: replicate to all layers
+  } else if (length(hl) != nl) {
+    stop("ssrMLP: length(hl) must be 1 or equal to nl")
   }
-  printR('ssrMLP: number of neurons per layer: %i\n', hl[1])
+  printR('ssrMLP: number of layers: %i / neurons per layer: %s\n', nl, paste(hl, collapse=" / "))
   
   # standardizing to unit interval
   if (is.null(W)) {
@@ -257,14 +276,10 @@ ssrmlp_train <- function(X, Y, std=TRUE, opt='ps', hl=NULL, W=NULL, k=10, fn=4, 
       minY <- 0
       maxY <- 1
     }
-    W0 <- array(runif(hl[1]*il, -0.5, 0.5), dim=c(hl[1], il))
-    W1 <- array(runif(hl[2]*hl[1], -0.5, 0.5), dim=c(hl[2], hl[1]))
-    W2 <- array(runif(ol*hl[2], -0.5, 0.5), dim=c(ol, hl[2]))
+    Wl <- initWeightsR(c(il, hl, ol))
   } else {
     printR("ssrMLP: re-training...\n")
-    W0 <- W$W0
-    W1 <- W$W1
-    W2 <- W$W2
+    Wl <- W$Wl
     
     minX <- W$minX
     maxX <- W$maxX
@@ -277,122 +292,131 @@ ssrmlp_train <- function(X, Y, std=TRUE, opt='ps', hl=NULL, W=NULL, k=10, fn=4, 
   # unbelievable: special treating of one dimension
   # apply is transposing if X has more than one column
   # and converting to array otherwise
-  if (il > 2) X <- t(X) else
-    X <- matrix(X)
+  if (il > 2) X <- t(X) 
+  else        X <- matrix(X)
   
   Xnb <- X  # coordinates without bias-coordinate
   X <- cbind(X, rep(1, nrow(X)))  # bind additional bias neuron
   
-  switch(opt,
-  'lse'= {
-    printR("ssrMLP: optimizing with least-squares-residuals\n")
-    errfct <- err_lseR
-    facfct <- fac_lseR
-    nb <- NULL
-    nb_cur_ind <- NULL
-    nb_cur_dst <- NULL
-  },
-  'ps_lse'= {
-    printR("ssrMLP: optimizing with combined partial sum and least-squares-residuals criterion\n")
-    errfct <- err_ps_lseR
-    facfct <- fac_ps_lseR
-    if (is.null(alpha)) {
-      alpha = 0.1
-    }
-    # neighborhood for partial sums: k times the number of axis plus center
-    d <- as.matrix(dist(Xnb))
-    nb <- lapply(seq_len(ncol(d)), function(i) head(sort(d[,i], index.return=TRUE)$ix, (il-1)*k+1))
-    nb_dst <- lapply(seq_len(ncol(d)), function(i) head(sort(d[,i]), (il-1)*k+1)) # will be used for error function derivative
-  },
-  'ps_l1'= {
-    printR("ssrMLP: optimizing with combined partial sum and l1 curvature criterion\n")
-    errfct <- err_ps_l1R
-    facfct <- fac_ps_l1R
-    if (is.null(alpha)) {
-      alpha = 0.0001
-    }
-    # neighborhood for partial sums: k times the number of axis plus center
-    d <- as.matrix(dist(Xnb))
-    nb <- lapply(seq_len(ncol(d)), function(i) head(sort(d[,i], index.return=TRUE)$ix, (il-1)*k+1))
-    nb_dst <- lapply(seq_len(ncol(d)), function(i) head(sort(d[,i]), (il-1)*k+1)) # will be used for error function derivative
-  },
-  'ext'= {
-    printR("ssrMLP: optimizing with external error function\n")
-    errfct = errfct_ex # use external error function given by parameter
-    facfct = facfct_ex # use external factor function given by parameter
-    # neighborhood for partial sums: k times the number of axis plus center
-    d <- as.matrix(dist(Xnb))
-    nb <- lapply(seq_len(ncol(d)), function(i) head(sort(d[,i], index.return=TRUE)$ix, (il-1)*k+1))
-    nb_dst <- lapply(seq_len(ncol(d)), function(i) head(sort(d[,i]), (il-1)*k+1)) # will be used for error function derivative
-  },
-  { # standard: 'ps'
-    printR("ssrMLP: optimizing with partial sums\n")
-    errfct <- err_psR
-    facfct <- fac_psR
-    # neighborhood for partial sums: k times the number of axis plus center
-    d <- as.matrix(dist(Xnb))
-    nb <- lapply(seq_len(ncol(d)), function(i) head(sort(d[,i], index.return=TRUE)$ix, (il-1)*k+1))
-    nb_dst <- lapply(seq_len(ncol(d)), function(i) head(sort(d[,i]), (il-1)*k+1)) # will be used for error function derivative
+  eta_i <- eta
+
+  # set Lagrange parameter if not already set
+  if (is.null(alpha)) {
+    alpha <- 0.5
   }
+  if (is.null(beta)) {
+    beta <- 1-alpha
+  }
+  
+  # options: lse + ps, simple optimizing, ps (standard)
+  switch (opt,
+          'lse' = {
+            printR("ssrMLP: minimizing squared errors s.t. partial sums\n")
+            printR("ssrMLP: parameters: alpha=%f, beta=%f\n", alpha, beta)
+            optfct   <- opt_lseR
+            optfct_d <- opt_lse_dR
+          }, 
+          'simple' = {
+            printR("ssrMLP: minimizing simplified loss function\n")
+            optfct   <- opt_simpleR
+            optfct_d <- opt_simple_dR
+          },
+          {
+            printR("ssrMLP: minimizing partial sums\n")
+            optfct   <- opt_psR
+            optfct_d <- opt_ps_dR
+          }
   )
   
-  # set if not already set
-  if (is.null(alpha)) {
-    alpha = 0.0
-  }
+  # stating strictness of result
+  if (accept > 0) printR("ssrMLP: accepting %i%% deviation in PS criterion\n", accept)
+  else            printR("ssrMLP: accepting only strict PS criterion\n")
   
-  Yp <- calcOutR(X, W0, W1, W2)
+  # neighborhood for partial sums: k times the number of axis plus center
+  # (als Matrizen statt Listen - siehe buildNeighborhoodR)
+  nbdata <- buildNeighborhoodR(Xnb, k_nb)
+  nb     <- nbdata$nb
+  nb_dst <- nbdata$nb_dst
+  nb_i   <- nbdata$nb_i
   
-  meanE <- errfct(nb, nb_dst, il, Y, Yp)
+  # init output vector
+  Yp <- calcOutNR(X, Wl)
+  # init vector of partial sums (vektorisiert)
+  s_nb <- computeSnbR(Y, Yp, nb, k_nb)
+  meanE <- optfct(Y, Yp, nb, nb_dst, s_nb, k, fn, alpha, beta)
+  printR("ssrMLP: step width: eta=%f\n", eta)
+  
   printR("ssrMLP: start error: %f\n", meanE)
   minError = meanE 
-  minW0 <- W0
-  minW1 <- W1
-  minW2 <- W2
+  minWl <- Wl
+  minps <- psR(s_nb, fn)
+  minYp <- Yp
+  printR("ssrMLP: start partial sum: %f\n", minps)
   
   printR("ssrMLP: %d iterations: [", maxIter)
   chng = FALSE
+  accepted = FALSE
   
-  # mix input
-  mixSet <- sample(nrow(X))
-  # iterate
+  # iterate / mix input in every iteration
   for (c in 1:maxIter) {
+    mixSet <- sample(nrow(X))
+    Yp_old <- Yp
     for (i in mixSet) {
-      x <- matrix(X[i,], nrow = 1)
-      O1 <- as.vector(sigmoidR(W0 %*% t(x)))
-      O2 <- as.vector(sigmoidR(W1 %*% O1))
-      temp <- W2*O2*(1-O2)
-      dW2 <- O2
-      dW1 <- t(t(temp)%*%O1) 
-      dW0 <- t(O1*(1-O1)*(temp %*% W1))%*% x 
-      Yp[i] <- calcOutR(x, W0, W1, W2)  
-      yfactor = facfct(nb, nb_dst, il, Y, Yp, i)
-      W0 <- W0 + eta * yfactor * dW0
-      W1 <- W1 + eta * yfactor * dW1
-      W2 <- W2 + eta * yfactor * dW2
+      x <- X[i,]
+      fwd <- forwardR(x, Wl)
+      dW <- gradR(Wl, fwd$A)
+      # calculate i-th coordinate
+      Yp[i] <- fwd$y
+      old_sign = sign(Y[i]-Yp_old[i])
+      new_sign = sign(Y[i]-Yp[i])
+      if (old_sign != new_sign) {
+        idx <- nb_i[[i]]
+        s_nb[idx] <- s_nb[idx] - old_sign + new_sign
+      }
+      # calculate gradient  
+      yfactor = optfct_d(Y, Yp, nb, nb_dst, s_nb, nb_i, i, k, fn, alpha, beta)
+      # do descent
+      for (l in seq_along(Wl)) {
+        Wl[[l]] <- Wl[[l]] + eta_i * yfactor * dW[[l]]
+      }
     }
-    Yp <- calcOutR(X, W0, W1, W2)
+    Yp <- calcOutNR(X, Wl)
+    s_nb <- computeSnbR(Y, Yp, nb, k_nb)
     
-    meanE <- errfct(nb, nb_dst, il, Y, Yp)
-    #print(paste0('error (', c, '): ', meanE))
-    if (meanE < minError) {
+    meanE_old <- meanE
+    meanE <- optfct(Y, Yp, nb, nb_dst, s_nb, k, fn, alpha, beta)
+
+    if (meanE <= minError) {
       chng = TRUE
       minError <- meanE
-      minW0 <- W0
-      minW1 <- W1
-      minW2 <- W2
-      #print(paste0('minError (', c, '): ', minError))
+      minWl <- Wl
+      minps <- psR(s_nb, fn)
+      minYp <- Yp
     }
     if (c %% 50 == 0) {
-      if (chng) printR("X")
-      else      printR("x")
+      if (chng) {
+        printR("Y")
+      } else {
+        printR("x")
+      } 
       chng = FALSE
+      # check, if ps criterion already satisfied
+      if (psplotnd(Xnb, Y, minYp, resultplot=FALSE, accept=accept)) {
+        accepted = TRUE
+        break
+      }
     }
   }
   printR("]\n")
+  printR('ssrMLP: finshed after %i iterations\n', c)
+  if (accepted) printR('ssrMLP: final result is acceptable\n')
+  else          printR('ssrMLP: final result is not acceptable!\n')
   printR('ssrMLP: final minError: %f\n', minError)
+  printR('ssrMLP: final partial sum: %f\n', minps)
   end.time <- Sys.time()
   printR('ssrMLP: training duration %s secs\n', difftime(end.time, start.time, units='secs'))
-  return (list(W0=minW0, W1=minW1, W2=minW2, 
-               minX=minX, maxX=maxX, minY=minY, maxY=maxY))
+  return (list(Wl=minWl, 
+               minX=minX, maxX=maxX, minY=minY, maxY=maxY,
+               X=Xnb, Y=Y, mu=minYp[,1], accepted=accepted))
 }
+

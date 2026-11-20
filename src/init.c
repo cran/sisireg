@@ -8,9 +8,6 @@
 extern void ssrC(int* funk, double* y, double* mu, int* anz, int* fn, int* ps, int* simanz);
 extern void ssr_neC(double* x, double* y, double* mu, int* anz, int* fn, int* simanz);
 
-SEXP ssr3dC(SEXP koord, SEXP nb, SEXP nb1, SEXP z, SEXP fn, SEXP iteranz);
-SEXP ssrndC(SEXP koord, SEXP nb_ms, SEXP nb_dst, SEXP nb_ps, SEXP y, SEXP fn, SEXP iteranz);
-
 static R_NativePrimitiveArgType ssr_t[] = {
   INTSXP, REALSXP, REALSXP, INTSXP, INTSXP, INTSXP, INTSXP
 };
@@ -25,14 +22,8 @@ static const R_CMethodDef cMethods[] = {
   {NULL, NULL, 0, NULL}
 };
 
-static const R_CallMethodDef callMethods[] = {
-  {"ssr3dC", (DL_FUNC) &ssr3dC, 6},
-  {"ssrndC", (DL_FUNC) &ssrndC, 7},
-  {NULL, NULL, 0}
-};
-
 void R_init_sisireg(DllInfo* info) {
-  R_registerRoutines(info, cMethods, callMethods, NULL, NULL);
+  R_registerRoutines(info, cMethods, NULL, NULL, NULL);
   R_useDynamicSymbols(info, FALSE);
   R_forceSymbols(info, TRUE);
 }

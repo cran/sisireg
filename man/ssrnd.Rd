@@ -6,14 +6,17 @@
 Calculates the multi-dimensional SSR model
 }
 \usage{
-ssrnd(koord, dat, k = NULL, fn = NULL, iter = 1000)
+ssrnd(X, Y, mdl = NULL, k = NULL, fn = NULL, n_l1 = NULL, iter = 1000, eps = 1e-04)
 }
 \arguments{
-  \item{koord}{data frame with n-dimensional coordinates.}
-  \item{dat}{data frame with observations.}
+  \item{X}{data frame with n-dimensional coordinates.}
+  \item{Y}{data frame with observations.}
+  \item{mdl}{optional: pre-trained model.}
   \item{k}{optional: maxumum run length for the model.}
   \item{fn}{optional: quantile for partial sums.}
+  \item{n_l1}{optional: number of elements in neighborhood for L1-calculation.}
   \item{iter}{optional: number of iterations for the numeric solver.}
+  \item{eps}{optional: barrier parameter for optimization.}
 }
 \value{
   \item{df}{data frame with the relevant model data.}
@@ -22,12 +25,15 @@ ssrnd(koord, dat, k = NULL, fn = NULL, iter = 1000)
 \donttest{
 # generate data
 set.seed(1234)
-x <- rnorm(300)
-y <- rnorm(300)
-xy <- data.frame(x=x, y=y)
-z <-data.frame(z=rnorm(300) + atan2(x, y))
+x_ <- y_ <- seq(-3, 3, length=20)
+xy <- expand.grid(x=x_,y=y_)
+x <- xy$x
+y <- xy$y
+z <- rnorm(400) + atan2(x, y)
+X <- matrix(cbind(x, y), ncol = 2)
+Y <- as.double(z)
 # Training
-df_model <- ssrnd(xy, z)
+df_model <- ssrnd(X, Y, k = 4, fn = 8)
 }
 }
 \author{

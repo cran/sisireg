@@ -1,12 +1,12 @@
-% File sisireg/man/ssrnd2NN.Rd
-\name{ssrnd2NN}
-\alias{ssrnd2NN}
+% File sisireg/man/ssrndNN.Rd
+\name{ssrndNN}
+\alias{ssrndNN}
 \title{Near Neighborhood Estimator for Multi-dimensional SSR model}
 \description{
 Calculates the Near Neighborhood Estimator in a multi-dimensional SSR model
 }
 \usage{
-ssrnd2NN(X, Y, k, weighted=FALSE)
+ssrndNN(X, Y, k, weighted=FALSE)
 }
 \arguments{
   \item{X}{matrix with n-dimensional coordinates.}
@@ -28,7 +28,7 @@ X <- matrix(cbind(x, y), ncol = 2)
 Y <- as.double(z)
 
 # Training
-mdl <- ssrnd2NN(X, Y, 10)
+mdl <- ssrndNN(X, Y, 10)
 }
 }
 \author{
